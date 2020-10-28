@@ -144,7 +144,7 @@
         "config_reloading": true,
         "plugin_reloading": false
     },
-    "repo_link": "https://github.com/TotallyNotRobots/CloudBot/",
+    "repo_link": "https://github.com/Gavisann/CloudBot/",
     "logging": {
         "console_debug": false,
         "file_debug": false,
