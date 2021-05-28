@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 from collections import defaultdict
 from threading import RLock
 
@@ -8,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from cloudbot import hook
 from cloudbot.util import database
-from cloudbot.util.pager import paginated_list, CommandPager
+from cloudbot.util.pager import paginated_list
 
 search_pages = defaultdict(dict)
 
@@ -55,7 +56,23 @@ def moregrab(text, chan, conn):
     if not pages:
         return "There are no grabsearch pages to show."
 
-    return pages.handle_lookup(text)
+    if text:
+        try:
+            index = int(text)
+        except ValueError:
+            return "Please specify an integer value."
+
+        page = pages[index - 1]
+        if page is None:
+            return "Please specify a valid page number between 1 and {}.".format(len(pages))
+
+        return page
+
+    page = pages.next()
+    if page is not None:
+        return page
+
+    return "All pages have been shown you can specify a page number or do a new search."
 
 
 def check_grabs(name, quote, chan):
@@ -201,10 +218,49 @@ def grabsearch(text, chan, conn):
 
         grabs.append(format_grab(name, quote))
 
-    pager = paginated_list(grabs, pager_cls=CommandPager)
+    pager = paginated_list(grabs)
     search_pages[conn.name][chan] = pager
     page = pager.next()
     if len(pager) > 1:
         page[-1] += " .moregrab"
 
     return page
+
+def get_regex_line(conn, chan, text):
+    nick = text.split()[0]
+    lookup = text.split()[1]
+    for name, timestamp, msg in reversed(conn.history[chan]):
+        if nick.casefold() == name.casefold():
+            if lookup in msg:
+                return name, timestamp, msg
+
+    return None, None, None
+
+@hook.command()
+def grabadv(text, nick, chan, db, conn):
+    if text.lower() == nick.lower():
+        return "Didn't your mother teach you not to grab yourself?"
+
+    with grab_locks_lock:
+        grab_lock = grab_locks[conn.name.casefold()].setdefault(chan.casefold(), RLock())
+
+    with grab_lock:
+        name, timestamp, msg = get_regex_line(conn, chan, text)
+        if not msg:
+            return "I couldn't find anything from {} in recent history.".format(text)
+
+        if check_grabs(text.casefold(), msg, chan):
+            return "I already have that quote from {} in the database".format(text)
+
+        try:
+            grab_add(name.casefold(), timestamp, msg, chan, db)
+            #return 'I would have added "{}"'.format(msg)
+        except SQLAlchemyError:
+            logger.exception("Error occurred when grabbing %s in %s", name, chan)
+            return "Error occurred."
+
+        if check_grabs(name.casefold(), msg, chan):
+            return "the operation succeeded."
+
+        return "the operation failed"
+
