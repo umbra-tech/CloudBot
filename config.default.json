@@ -52,7 +52,6 @@
                 "nickserv_name": "nickserv",
                 "nickserv_command": "IDENTIFY"
             },
-            "keep_alive": false,
             "strip_newlines": true,
             "max_line_length": 510,
             "encoding": "utf-8",
@@ -144,7 +143,7 @@
         "config_reloading": true,
         "plugin_reloading": false
     },
-    "repo_link": "https://github.com/Gavisann/CloudBot/",
+    "repo_link": "https://git.io/karmachameleon",
     "logging": {
         "console_debug": false,
         "file_debug": false,
