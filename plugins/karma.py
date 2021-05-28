@@ -34,6 +34,7 @@ def update_score(nick, chan, thing, score, db):
         # This is a PM, don't set points in a PM
         return
 
+
     thing = thing.strip()
     clause = and_(karma_table.c.name == nick, karma_table.c.chan == chan, karma_table.c.thing == thing.lower())
     karma = db.execute(select([karma_table.c.score]).where(clause)).fetchone()
@@ -53,14 +54,6 @@ def addpoint(text, nick, chan, db):
     update_score(nick, chan, text, 1, db)
 
 
-@hook.regex(karmaplus_re)
-def re_addpt(match, nick, chan, db, notice):
-    """no useful help txt"""
-    thing = match.group().split('++')[0]
-    if thing:
-        addpoint(thing, nick, chan, db)
-    else:
-        notice(pluspts(nick, chan, db))
 
 
 @hook.command("mm", "rmpoint")
@@ -97,21 +90,15 @@ def minuspts(nick, chan, db):
     return output
 
 
-@hook.regex(karmaminus_re)
-def re_rmpt(match, nick, chan, db, notice):
-    """no useful help txt"""
-    thing = match.group().split('--')[0]
-    if thing:
-        rmpoint(thing, nick, chan, db)
-    else:
-        notice(minuspts(nick, chan, db))
+
 
 
 @hook.command("points", autohelp=False)
-def points_cmd(text, chan, db):
+def points_cmd(text, chan, db, notice):
     """<thing> - will print the total points for <thing> in the channel."""
     score = 0
     thing = ""
+    
     if text.endswith(("-global", " global")):
         thing = text[:-7].strip()
         query = select([karma_table.c.score]).where(karma_table.c.thing == thing.lower())
@@ -121,6 +108,7 @@ def points_cmd(text, chan, db):
             karma_table.c.chan == chan)
 
     karma = db.execute(query).fetchall()
+    
     if karma:
         pos = 0
         neg = 0
@@ -133,6 +121,7 @@ def points_cmd(text, chan, db):
         if thing:
             return "{} has a total score of {} (+{}/{}) across all channels I know about.".format(thing, score, pos,
                                                                                                   neg)
+        
         return "{} has a total score of {} (+{}/{}) in {}.".format(text, score, pos, neg, chan)
 
     return "I couldn't find {} in the database.".format(text)
@@ -181,3 +170,47 @@ def pointsbottom(text, chan, db):
     """- prints the top 10 things with the lowest points in the channel. To see the bottom 10 items in all of the
     channels the bot sits in use .bottomten global."""
     return do_list(text, db, chan, False)
+
+@hook.regex(karmaminus_re)
+def re_rmpt(match, nick, chan, db, notice):
+    """no useful help txt"""
+    thing = match.group().split('--')[0]
+    if thing.lower() == 'notepad':
+        return
+    if thing.lower() == nick.lower():
+        rmpoint(thing, nick, chan, db)
+        return
+    if thing:
+        rmpoint(thing, nick, chan, db)
+        return points_cmd(thing, chan, db, notice) 
+    else:
+        notice(minuspts(nick, chan, db))
+
+@hook.regex(karmaplus_re)
+def re_addpt(match, nick, chan, db, notice):
+    """no useful help txt"""
+    thing = match.group().split('++')[0]
+    if thing.lower() == 'notepad':
+        return
+    if thing.lower() == nick.lower():
+        rmpoint(thing, nick, chan, db)
+        return
+    if thing:
+        addpoint(thing, nick, chan, db)
+        return points_cmd(thing, chan, db, notice)        
+    else:
+        notice(pluspts(nick, chan, db))
+
+
+@hook.command("goodbot")
+def goodbot(text, nick, chan, db, notice):
+    text = 'Karmachameleon' 
+    update_score(nick, chan, text, 1, db)
+    return points_cmd(text, chan, db, notice)
+
+@hook.command("badbot")
+def badbot(text, nick, chan, db, notice):
+    text = 'Karmachameleon' 
+    update_score(nick, chan, text, -1, db)
+    return points_cmd(text, chan, db, notice)
+
