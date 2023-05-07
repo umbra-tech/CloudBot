@@ -7,7 +7,14 @@ import textwrap
 
 RATELIMIT = {}
 
-def check_rate_limit(nick):
+def check_rate_limit(nick, event):
+    permission_manager = event.conn.permissions
+    user = event.mask
+    user_permissions = permission_manager.get_user_permissions(user.lower())
+    
+
+    if "op" in user_permissions or "botcontrol" in user_permissions:
+        return True
     if RATELIMIT.get(nick, False) == False:
         return True
     time_difference = abs(datetime.now() - RATELIMIT.get(nick))
@@ -21,21 +28,24 @@ def add_to_rate_limit(nick):
     pass
 
 @hook.command("gpt", autohelp=False)
-def chat_gpt(nick, chan, text):
-    rate_limit = check_rate_limit(nick)
-    if rate_limit != True:
-        return rate_limit
+def chat_gpt(nick, chan, text, event):
+    rate_limit = check_rate_limit(nick, event)
+    #if rate_limit != True:
+        #return rate_limit
     prompt = (
         f"{nick} on IRC channel {chan} says: {text}\n"
     )
     open_ai_api_key = bot.config.get_api_key("openai")
-    resp = requests.post("https://api.openai.com/v1/completions",
+    resp = requests.post("https://api.openai.com/v1/chat/completions",
                            headers={
                              "Authorization": f"Bearer {open_ai_api_key}",
                            },
                            json={
-                               "model": "text-davinci-003",
-                               "prompt": prompt,
+                               "model": "gpt-3.5-turbo",
+                               "messages": [{
+                                   "role": "user",
+                                   "content": prompt,
+                                   "name": nick}],
                                "max_tokens": 1024,
                                "temperature": 1,
                                "n": 1,
@@ -45,7 +55,7 @@ def chat_gpt(nick, chan, text):
     )
     add_to_rate_limit(nick)
     if resp.status_code == 200:
-        answer = resp.json()["choices"][0]["text"].replace("\n","")
+        answer = resp.json()["choices"][0]["message"]["content"].replace("\n","")
         messages = textwrap.wrap(answer,250)
         if len(messages) > 2:
             hastebin_api_key = bot.config.get_api_key("hastebin")
