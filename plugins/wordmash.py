@@ -99,13 +99,17 @@ def wordmash(nick: str, text: str) -> str:
     return serve_new_mash()
 
 @hook.command("wordmash_reset", autohelp=False)
-def reset_wordmash() -> str:
+def reset_wordmash() -> list[str]:
     """
     This command allows for a new wordmash to be served
     Returns:
-       str:  Bot Message
+       []str:  Bot Message
     """
-    return serve_new_mash()
+    global current_word
+    return [
+        f"Reset ! The word was \x0309{current_word}\x03: {get_definition(current_word)}",
+        serve_new_mash()
+    ]
 
 @hook.command("wordmash_scores", autohelp=False)
 def wordmash_scores(chan) -> str:
@@ -119,3 +123,14 @@ def wordmash_scores(chan) -> str:
     for nick, score in user_scores:
         out += f"\x02{nick[:1] + ' ' + nick[1:]}\x02: {score} • "
     return out
+
+@hook.command("wordmash_hint", autohelp=False)
+def wordmash_hint() -> str:
+    """
+    This command gives the definition of the wordmash as an hint
+    to help players find the word
+    Returns:
+        str: Bot Message
+    """
+    global current_word
+    return f"\x02Hint:\x02 {get_definition(current_word)}"
