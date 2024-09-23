@@ -121,7 +121,7 @@ def wordmash_scores(chan) -> str:
     user_scores = scores.select().order_by(scores.c.score.desc()).limit(10).execute()
     out = f"Word mash scores in {chan}: "
     for nick, score in user_scores:
-        out += f"\x02{nick[:1] + ' ' + nick[1:]}\x02: {score} • "
+        out += f"\x02{nick}\x02: {score} • "
     return out
 
 @hook.command("wordmash_hint", autohelp=False)
