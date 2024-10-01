@@ -293,7 +293,7 @@ class CloudBot:
 
         # Connect to servers
         await asyncio.gather(
-            *[conn.try_connect() for conn in self.connections.values()], loop=self.loop
+            *[conn.try_connect() for conn in self.connections.values()]
         )
         logger.debug("Connections created.")
 
@@ -424,5 +424,5 @@ class CloudBot:
                         break
 
         # Run the tasks
-        await asyncio.gather(*run_before_tasks, loop=self.loop)
-        await asyncio.gather(*tasks, loop=self.loop)
+        await asyncio.gather(*run_before_tasks)
+        await asyncio.gather(*tasks)
