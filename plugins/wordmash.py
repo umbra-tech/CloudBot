@@ -92,8 +92,7 @@ def wordmash(nick: str, text: str) -> str:
     if text != "" and current_mash != "":
         if text == current_word:
             return [
-                f"Good job! \x0309{current_word}\x03: {get_definition(current_word)}",
-                f"You gain an internet point, making your total \x0308{bump_nick_score(nick)}\x03",
+                f"Good job! \x0309{current_word}\x03: {get_definition(current_word)}. || You gain an internet point, making your total \x0308{bump_nick_score(nick)}\x03",
                 serve_new_mash()
             ]
         else:
