@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 import textwrap
-import re
 import shutil
-import os
 import random
 import string
 import requests
@@ -10,7 +8,7 @@ from google.cloud import storage
 
 from cloudbot import hook
 from cloudbot.bot import bot
-
+from cloudbot.util import web
 
 
 RATELIMIT = {}
@@ -105,24 +103,13 @@ def chat_gpt(nick, text):
     , timeout=30)
     add_to_rate_limit(nick)
     if resp.status_code == 200:
-        answer = resp.json()["choices"][0]["message"]["content"].replace("\n","")
+        answer = resp.json()["choices"][0]["message"]["content"]
         build_context(nick="Karmachameleon", text=answer, role="assistant")
         messages = textwrap.wrap(answer,420)
         if len(messages) > 3:
-            hastebin_api_key = bot.config.get_api_key("hastebin")
-            hastebin_resp = requests.post("https://hastebin.com/documents",
-                                          headers={
-                                              "Authorization": f"Bearer {hastebin_api_key}",
-                                              "Content-Type": "text/plain"
-                                          },
-                                          data="\n".join(messages)
-            , timeout=30)
-            if hastebin_resp.status_code == 200:
-                truncated_resp = messages[0:3]
-                truncated_resp.append(f"Find the rest of the answer here: https://hastebin.com/share/{hastebin_resp.json()['key']}")
-                return truncated_resp
-
-            return "Hastebin failed with error {hastebin_resp.status_code} and message: {hastebin_resp.json()}"
+            truncated_resp = messages[0:3]
+            truncated_resp.append(f"Find the rest of the answer here: {web.paste(textwrap.fill(answer,140))}")
+            return truncated_resp
         return messages
     return textwrap.wrap(
         f"ChatGPT failed with error code {resp.status_code}",
@@ -165,11 +152,3 @@ def chat_gpt_image(nick, chan, text, event):
         f"ChatGPT failed with error code {resp.status_code}",
         250
     )
-
-message = re.compile('^karmachameleon.*',re.IGNORECASE)
-
-
-#@hook.regex(message)
-#def chat_gpt_re(nick, chan, content, event):
-#    text = content.lower().split('karmachameleon')[1]
-#    return chat_gpt(nick, chan, text, event)
